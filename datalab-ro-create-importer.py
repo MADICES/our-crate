@@ -178,4 +178,5 @@ if __name__ == "__main__":
     import sys
 
     crate_path = Path(sys.argv[1])
-    upload_and_import_crate_as_entry(crate_path, "https://datalab.concatlab.eu")
+    datalab_api_url = sys.argv[2]
+    upload_and_import_crate_as_entry(crate_path, datalab_api_url)

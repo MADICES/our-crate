@@ -8,7 +8,7 @@ Simple utility for consuming crates produced with the profile described in [this
 ## Usage
 
 ```shell
-uv run --script datalab-ro-create-importer.py <ro-crate-path>
+uv run --script datalab-ro-create-importer.py <ro-crate-path> <datalab_api_url>
 ```
 
 ## Examples
@@ -89,7 +89,7 @@ This should be interpreted as follows:
 When running the script, you get the following output:
 
 ```
-$ uv run --script datalab-ro-create-importer.py examples/results.3.zip
+$ uv run --script datalab-ro-create-importer.py examples/results.3.zip https://datalab.concatlab.eu
                             Entities in RO-Crate
 ┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
 ┃ @id                                                    ┃ @type            ┃
