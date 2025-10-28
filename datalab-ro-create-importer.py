@@ -12,13 +12,14 @@ MADICES_PROFILE_PID = "https://github.com/MADICES/MADICES-2025/discussions/25"
 def pprint_crate(crate):
     from rich.console import Console
     from rich.table import Table
-    from networkx import DiGraph, generate_network_text 
+    from networkx import DiGraph, generate_network_text
 
     ro_crate_graph = DiGraph()
 
     console = Console()
     table = Table(
-        "@id", "@type",
+        "@id",
+        "@type",
         title="Entities in RO-Crate",
     )
     edges = []
@@ -40,7 +41,12 @@ def pprint_crate(crate):
                     if isinstance(related_entity, str):
                         edges.append((entity_label, related_entity))
                     else:
-                        edges.append((entity_label, f"{related_entity.type}: {related_entity.id}"))
+                        edges.append(
+                            (
+                                entity_label,
+                                f"{related_entity.type}: {related_entity.id}",
+                            )
+                        )
 
     ro_crate_graph.add_edges_from(edges)
 
@@ -67,14 +73,13 @@ def _find_repository_objects(crate: ROCrate) -> tuple[Entity | None, Entity | No
     base_repo_object = None
     for entity in crate.get_entities():
         if "RepositoryObject" in entity.type and not entity.id.startswith("#"):
+            base_repo_object = entity
             parts = entity.get("hasPart")
             if not isinstance(parts, list):
                 parts = [parts]
             for part in parts:
                 if isinstance(part, str):
                     continue
-                if part.id == "./" and part.type == "Dataset":
-                    base_repo_object = entity
                 if part.id.startswith("#") and part.type == "RepositoryObject":
                     subparts = part.get("hasPart")
                     if not isinstance(subparts, list):
@@ -99,18 +104,20 @@ def _find_repository_objects(crate: ROCrate) -> tuple[Entity | None, Entity | No
 
 
 def consume_crate(crate_path: Path):
-
     crate = ROCrate(crate_path)
     pprint_crate(crate)
 
     # Extract contextual entities and check e.g., profile
     profile = crate.get("./").get("conformsTo")
     if profile.id != MADICES_PROFILE_PID:
-        raise RuntimeError(f"Unexpected RO-Crate profile: {profile.id}. Only MADICES-2025 ({MADICES_PROFILE_PID}) profile is supported.")
+        raise RuntimeError(
+            f"Unexpected RO-Crate profile: {profile.id}. Only MADICES-2025 ({MADICES_PROFILE_PID}) profile is supported."
+        )
 
     parent, child = _find_repository_objects(crate)
 
     return crate, (parent, child)
+
 
 def upload_and_import_crate_as_entry(crate_path: Path, api_url: str):
     from datalab_api import DatalabClient
@@ -118,29 +125,55 @@ def upload_and_import_crate_as_entry(crate_path: Path, api_url: str):
     crate, (parent, child) = consume_crate(crate_path)
 
     if not parent:
-        raise RuntimeError("No parent RepositoryObject specified; cannot proceed with upload.")
+        raise RuntimeError(
+            "No parent RepositoryObject specified; cannot proceed with upload."
+        )
 
     with DatalabClient(api_url) as client:
-
-        datalab_parent = client.get_item(parent.id)
+        datalab_parent = client.get_item(refcode=parent.id)
 
         if not datalab_parent:
-            raise RuntimeError(f"Parent RepositoryObject with ID {parent.id} not found in Datalab.")
+            raise RuntimeError(
+                f"Parent RepositoryObject with ID {parent.id} not found in Datalab."
+            )
 
         if child:
-            target = client.create_item(automatically_generate_id=True)
+            constituent_link = {
+                "synthesis_constituents": [
+                    {
+                        "item": {"refcode": datalab_parent["refcode"]},
+                        "quantity": None,
+                        "unit": None,
+                    }
+                ]
+            }
+            target = client.create_item(item_data=constituent_link)
 
         else:
             target = datalab_parent
 
-        # Otherwise, add data to parent
+        target_refcode = target["refcode"]
+        target_item_id = target["item_id"]
+
+        # Add data to target
         dataset = crate.get("./")
         # Loop over files and upload them to target
-        pass
+
+        for part in dataset.get("hasPart"):
+            if isinstance(part, str):
+                continue
+            if part.type == "File":
+                file_path = crate_path / part.id.lstrip("./")
+                client.upload_file(target_item_id, file_path)
+
+                print(f"Added file {file_path} to item {target_refcode}")
+
+        print(f"Updated entry at {target_refcode}")
+
 
 if __name__ == "__main__":
     from pathlib import Path
     import sys
 
     crate_path = Path(sys.argv[1])
-    consume_crate(crate_path)
+    upload_and_import_crate_as_entry(crate_path, "https://datalab.concatlab.eu")
