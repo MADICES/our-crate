@@ -141,7 +141,7 @@ def upload_and_import_crate_as_entry(crate_path: Path, api_url: str):
             constituent_link = {
                 "synthesis_constituents": [
                     {
-                        "item": {"refcode": datalab_parent["refcode"], "type": "samples"},
+                        "item": {"item_id": datalab_parent["item_id"], "refcode": datalab_parent["refcode"], "type": "samples"},
                         "quantity": None,
                     }
                 ]
