@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.11,<3.13"
-# dependencies = ["datalab-api", "rocrate", "networkx"]
+# dependencies = ["datalab-api >= 0.3.1", "rocrate", "networkx"]
 # ///
 
 from pathlib import Path
@@ -141,9 +141,8 @@ def upload_and_import_crate_as_entry(crate_path: Path, api_url: str):
             constituent_link = {
                 "synthesis_constituents": [
                     {
-                        "item": {"refcode": datalab_parent["refcode"]},
+                        "item": {"refcode": datalab_parent["refcode"], "type": "samples"},
                         "quantity": None,
-                        "unit": None,
                     }
                 ]
             }
