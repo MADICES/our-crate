@@ -162,7 +162,10 @@ def upload_and_import_crate_as_entry(crate_path: Path, api_url: str):
             if isinstance(part, str):
                 continue
             if part.type == "File":
-                file_path = crate_path / part.id.lstrip("./")
+                file_path = crate_path.parent / part.id
+                if not file_path.is_file():
+                    raise RuntimeError(f"Expected file {file_path} defined in crate not found.")
+
                 client.upload_file(target_item_id, file_path)
 
                 print(f"Added file {file_path} to item {target_refcode}")
